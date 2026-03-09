@@ -1,0 +1,53 @@
+stages:
+  generate_synthetic:
+    cmd: python -m weatheringnet.cli info && echo "generate_synthetic placeholder"
+    deps:
+      - weatheringnet/ali/biomarkers.py
+      - configs/ali_config.yaml
+    outs:
+      - data/processed/synthetic_cohort.parquet:
+          persist: true
+
+  ali:
+    cmd: python -m weatheringnet.cli ali --config configs/ali_config.yaml
+    deps:
+      - weatheringnet/ali/calculator.py
+      - weatheringnet/ali/pipeline.py
+      - weatheringnet/ali/biomarkers.py
+      - configs/ali_config.yaml
+      - data/raw
+    outs:
+      - data/processed/ali_individual.parquet:
+          persist: true
+      - data/processed/ali_summary_by_group.csv:
+          persist: true
+
+  sdrs:
+    cmd: python -m weatheringnet.cli sdrs --data-dir data/external
+    deps:
+      - weatheringnet/sdrs/scorer.py
+      - weatheringnet/sdrs/sources.py
+      - data/external
+    outs:
+      - data/processed/sdrs_tracts.parquet:
+          persist: true
+
+  model:
+    cmd: python -m weatheringnet.model.trainer || echo "model stage placeholder"
+    deps:
+      - weatheringnet/model/trainer.py
+      - weatheringnet/model/explainer.py
+      - data/processed/ali_individual.parquet
+      - data/processed/sdrs_tracts.parquet
+    outs:
+      - data/processed/model.pkl:
+          persist: true
+
+  figures:
+    cmd: echo "figures stage placeholder"
+    deps:
+      - weatheringnet/model/explainer.py
+      - data/processed/model.pkl
+    outs:
+      - data/processed/figures:
+          persist: true

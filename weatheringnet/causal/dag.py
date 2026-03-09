@@ -47,33 +47,79 @@ class WeatheringDAG:
 
     NODES = {
         # Exposure / structural
-        "race_ses":         {"type": "exposure",     "measured": True,  "label": "Race/SES"},
-        "sdrs":             {"type": "mediator",     "measured": True,  "label": "Sociodemographic Risk Score"},
-
+        "race_ses": {"type": "exposure", "measured": True, "label": "Race/SES"},
+        "sdrs": {
+            "type": "mediator",
+            "measured": True,
+            "label": "Sociodemographic Risk Score",
+        },
         # Stress pathway
-        "ali":              {"type": "mediator",     "measured": True,  "label": "Allostatic Load Index"},
-        "hpa_dysreg":       {"type": "mediator",     "measured": False, "label": "HPA Axis Dysregulation"},
-        "glucocorticoids":  {"type": "mediator",     "measured": True,  "label": "Elevated Glucocorticoids (cortisol)"},
-
+        "ali": {"type": "mediator", "measured": True, "label": "Allostatic Load Index"},
+        "hpa_dysreg": {
+            "type": "mediator",
+            "measured": False,
+            "label": "HPA Axis Dysregulation",
+        },
+        "glucocorticoids": {
+            "type": "mediator",
+            "measured": True,
+            "label": "Elevated Glucocorticoids (cortisol)",
+        },
         # Inflammatory pathway
-        "inflammation":     {"type": "mediator",     "measured": True,  "label": "Chronic Inflammation (CRP/IL-6)"},
-        "tlr_dysreg":       {"type": "mediator",     "measured": False, "label": "TLR Dysregulation"},
-        "tcell_shift":      {"type": "mediator",     "measured": False, "label": "T-cell Phenotype Shift"},
-        "infection_risk":   {"type": "mediator",     "measured": True,  "label": "Maternal Infection Risk"},
-
+        "inflammation": {
+            "type": "mediator",
+            "measured": True,
+            "label": "Chronic Inflammation (CRP/IL-6)",
+        },
+        "tlr_dysreg": {
+            "type": "mediator",
+            "measured": False,
+            "label": "TLR Dysregulation",
+        },
+        "tcell_shift": {
+            "type": "mediator",
+            "measured": False,
+            "label": "T-cell Phenotype Shift",
+        },
+        "infection_risk": {
+            "type": "mediator",
+            "measured": True,
+            "label": "Maternal Infection Risk",
+        },
         # Epigenetic mechanism
-        "epigenetic_mod":   {"type": "mechanism",   "measured": False, "label": "Epigenetic Modification In Utero"},
-
+        "epigenetic_mod": {
+            "type": "mechanism",
+            "measured": False,
+            "label": "Epigenetic Modification In Utero",
+        },
         # Sex-specific
-        "sex_hormones":     {"type": "moderator",   "measured": True,  "label": "Sex Hormone Dysregulation"},
-        "microbiome":       {"type": "mediator",     "measured": False, "label": "Microbiome Composition"},
-
+        "sex_hormones": {
+            "type": "moderator",
+            "measured": True,
+            "label": "Sex Hormone Dysregulation",
+        },
+        "microbiome": {
+            "type": "mediator",
+            "measured": False,
+            "label": "Microbiome Composition",
+        },
         # Outcome
-        "aid_risk":         {"type": "outcome",      "measured": True,  "label": "Offspring AID Risk"},
-
+        "aid_risk": {
+            "type": "outcome",
+            "measured": True,
+            "label": "Offspring AID Risk",
+        },
         # Unmeasured confounders
-        "U_genetics":       {"type": "unmeasured",   "measured": False, "label": "Genetic Predisposition (U)"},
-        "U_lifetime_stress":{"type": "unmeasured",   "measured": False, "label": "Unmeasured Lifetime Stress (U)"},
+        "U_genetics": {
+            "type": "unmeasured",
+            "measured": False,
+            "label": "Genetic Predisposition (U)",
+        },
+        "U_lifetime_stress": {
+            "type": "unmeasured",
+            "measured": False,
+            "label": "Unmeasured Lifetime Stress (U)",
+        },
     }
 
     # ── Edge Definitions ─────────────────────────────────────────────────────
@@ -81,46 +127,46 @@ class WeatheringDAG:
 
     EDGES = [
         # Structural racism → neighborhood disadvantage
-        ("race_ses",        "sdrs",             "Geronimus 1992; Simons et al. 2021"),
-
+        ("race_ses", "sdrs", "Geronimus 1992; Simons et al. 2021"),
         # Neighborhood disadvantage → cumulative physiological stress
-        ("sdrs",            "ali",              "Weathering hypothesis; Seeman et al. 1997"),
-
+        ("sdrs", "ali", "Weathering hypothesis; Seeman et al. 1997"),
         # ALI → biological stress pathways
-        ("ali",             "hpa_dysreg",       "Brew et al. 2022 (paper study 3); Facchi et al. 2020 (study 10)"),
-        ("ali",             "inflammation",     "Black et al. 2002; Simons et al. 2021"),
-        ("ali",             "infection_risk",   "Vahidy et al. 2020; paper Discussion"),
-
+        (
+            "ali",
+            "hpa_dysreg",
+            "Brew et al. 2022 (paper study 3); Facchi et al. 2020 (study 10)",
+        ),
+        ("ali", "inflammation", "Black et al. 2002; Simons et al. 2021"),
+        ("ali", "infection_risk", "Vahidy et al. 2020; paper Discussion"),
         # HPA axis dysregulation → downstream mechanisms
-        ("hpa_dysreg",      "glucocorticoids",  "Facchi et al. 2020 (paper study 10)"),
-        ("glucocorticoids", "epigenetic_mod",   "Hederlingova et al. 2017 (paper study 6)"),
-        ("glucocorticoids", "sex_hormones",     "Assad et al. 2017 (paper study 7)"),
-
+        ("hpa_dysreg", "glucocorticoids", "Facchi et al. 2020 (paper study 10)"),
+        (
+            "glucocorticoids",
+            "epigenetic_mod",
+            "Hederlingova et al. 2017 (paper study 6)",
+        ),
+        ("glucocorticoids", "sex_hormones", "Assad et al. 2017 (paper study 7)"),
         # Inflammatory pathway → immune dysregulation
-        ("inflammation",    "tlr_dysreg",       "Han et al. 2022 (paper study 1)"),
-        ("inflammation",    "tcell_shift",      "Liu et al. 2022 (paper study 5)"),
-        ("infection_risk",  "tlr_dysreg",       "Waldorf & McAdams 2013 (paper study 9)"),
-        ("infection_risk",  "inflammation",     "Waldorf & McAdams 2013 (paper study 9)"),
-
+        ("inflammation", "tlr_dysreg", "Han et al. 2022 (paper study 1)"),
+        ("inflammation", "tcell_shift", "Liu et al. 2022 (paper study 5)"),
+        ("infection_risk", "tlr_dysreg", "Waldorf & McAdams 2013 (paper study 9)"),
+        ("infection_risk", "inflammation", "Waldorf & McAdams 2013 (paper study 9)"),
         # In-utero epigenetic mechanisms → AID risk
-        ("tlr_dysreg",      "epigenetic_mod",   "Han et al. 2022 (paper study 1)"),
-        ("tcell_shift",     "epigenetic_mod",   "Liu et al. 2022 (paper study 5)"),
-        ("epigenetic_mod",  "aid_risk",         "Foster 2023 central thesis"),
-
+        ("tlr_dysreg", "epigenetic_mod", "Han et al. 2022 (paper study 1)"),
+        ("tcell_shift", "epigenetic_mod", "Liu et al. 2022 (paper study 5)"),
+        ("epigenetic_mod", "aid_risk", "Foster 2023 central thesis"),
         # Sex-specific pathways → AID risk
-        ("sex_hormones",    "aid_risk",         "Assad et al. 2017 (paper study 7)"),
-        ("microbiome",      "sex_hormones",     "Köhling et al. 2017 (paper study 8)"),
-        ("microbiome",      "aid_risk",         "Köhling et al. 2017 (paper study 8)"),
-        ("inflammation",    "microbiome",       "Köhling et al. 2017 (paper study 8)"),
-
+        ("sex_hormones", "aid_risk", "Assad et al. 2017 (paper study 7)"),
+        ("microbiome", "sex_hormones", "Köhling et al. 2017 (paper study 8)"),
+        ("microbiome", "aid_risk", "Köhling et al. 2017 (paper study 8)"),
+        ("inflammation", "microbiome", "Köhling et al. 2017 (paper study 8)"),
         # Direct race_ses path (residual direct effect not through stress mediators)
-        ("race_ses",        "infection_risk",   "Vahidy et al. 2020; paper Discussion"),
-        ("race_ses",        "aid_risk",         "Roberts & Erdei 2020; residual direct"),
-
+        ("race_ses", "infection_risk", "Vahidy et al. 2020; paper Discussion"),
+        ("race_ses", "aid_risk", "Roberts & Erdei 2020; residual direct"),
         # Unmeasured confounders
-        ("U_genetics",      "aid_risk",         "Lu et al. 2018 (GWAS); polygenic risk"),
-        ("U_genetics",      "hpa_dysreg",       "Gene-environment interaction"),
-        ("U_lifetime_stress","ali",             "Stress before measurement window"),
+        ("U_genetics", "aid_risk", "Lu et al. 2018 (GWAS); polygenic risk"),
+        ("U_genetics", "hpa_dysreg", "Gene-environment interaction"),
+        ("U_lifetime_stress", "ali", "Stress before measurement window"),
     ]
 
     def __init__(self):
@@ -143,18 +189,20 @@ class WeatheringDAG:
         for node, attrs in self.NODES.items():
             node_type = attrs["type"]
             if node_type == "exposure":
-                lines.append(f'    {node} [exposure]')
+                lines.append(f"    {node} [exposure]")
             elif node_type == "outcome":
-                lines.append(f'    {node} [outcome]')
+                lines.append(f"    {node} [outcome]")
             elif node_type == "unmeasured":
-                lines.append(f'    {node} [latent]')
+                lines.append(f"    {node} [latent]")
         lines.append("")
         for cause, effect, _ in self.EDGES:
             lines.append(f"    {cause} -> {effect}")
         lines.append("}")
         return "\n".join(lines)
 
-    def adjustment_sets(self, exposure: str = "race_ses", outcome: str = "aid_risk") -> list:
+    def adjustment_sets(
+        self, exposure: str = "race_ses", outcome: str = "aid_risk"
+    ) -> list:
         """
         Identify valid adjustment sets using do-calculus (d-separation).
         Wraps dagitty logic via networkx for basic identification.

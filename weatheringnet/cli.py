@@ -10,10 +10,11 @@ Usage:
     weatheringnet info
 """
 
+from pathlib import Path
+
 import typer
 from rich.console import Console
 from rich.table import Table
-from pathlib import Path
 
 app = typer.Typer(
     name="weatheringnet",
@@ -26,7 +27,7 @@ console = Console()
 @app.command()
 def info():
     """Display WeatheringNet version and module status."""
-    from weatheringnet import __version__, __author__
+    from weatheringnet import __author__, __version__
 
     console.print(f"\n[bold cyan]WeatheringNet v{__version__}[/bold cyan]")
     console.print(f"Author: {__author__}")
@@ -37,16 +38,20 @@ def info():
     table.add_column("Description")
     table.add_column("Status", style="green")
 
-    table.add_row("ali",       "Allostatic Load Index (NHANES)",          "✓ Ready")
-    table.add_row("sdrs",      "Sociodemographic Risk Score (geospatial)", "✓ Ready")
-    table.add_row("causal",    "DAG + Mediation Analysis",                 "✓ Ready")
-    table.add_row("model",     "AID Risk Prediction (XGBoost + SHAP)",     "✓ Ready")
-    table.add_row("dashboard", "Full-stack equity dashboard",               "✓ Ready")
+    table.add_row("ali", "Allostatic Load Index (NHANES)", "✓ Ready")
+    table.add_row("sdrs", "Sociodemographic Risk Score (geospatial)", "✓ Ready")
+    table.add_row("causal", "DAG + Mediation Analysis", "✓ Ready")
+    table.add_row("model", "AID Risk Prediction (XGBoost + SHAP)", "✓ Ready")
+    table.add_row("dashboard", "Full-stack equity dashboard", "✓ Ready")
 
     console.print(table)
     console.print()
-    console.print("[dim]Grounded in: Foster (2023) — Maternal Stress and In-Utero AID Programming[/dim]")
-    console.print("[dim]Bloomberg School of Public Health, Johns Hopkins University[/dim]\n")
+    console.print(
+        "[dim]Grounded in: Foster (2023) — Maternal Stress and In-Utero AID Programming[/dim]"
+    )
+    console.print(
+        "[dim]Bloomberg School of Public Health, Johns Hopkins University[/dim]\n"
+    )
 
 
 @app.command()
@@ -55,6 +60,7 @@ def ali(
 ):
     """Run the Allostatic Load Index pipeline on NHANES data."""
     from weatheringnet.ali.pipeline import run_ali_pipeline
+
     console.print(f"[cyan]Running ALI pipeline with config: {config}[/cyan]")
     results = run_ali_pipeline(config)
     n = len(results["individual"])
@@ -65,24 +71,32 @@ def ali(
 @app.command()
 def sdrs(
     data_dir: Path = typer.Option("data/external", help="Root dir for SDOH data files"),
-    output: Path = typer.Option("data/processed/sdrs_tracts.parquet", help="Output path"),
+    output: Path = typer.Option(
+        "data/processed/sdrs_tracts.parquet", help="Output path"
+    ),
 ):
     """Build the Sociodemographic Risk Score for all US census tracts."""
     from weatheringnet.sdrs.scorer import SDRSScorer
+
     console.print(f"[cyan]Building SDRS from {data_dir}[/cyan]")
     scorer = SDRSScorer(data_dir=data_dir)
     result = scorer.build()
     result.to_parquet(output, index=False)
-    console.print(f"[green]✓ SDRS built for {len(result):,} census tracts → {output}[/green]")
+    console.print(
+        f"[green]✓ SDRS built for {len(result):,} census tracts → {output}[/green]"
+    )
 
 
 @app.command()
 def dag(
-    output: Path = typer.Option("docs/weathering_dag.dot", help="Output path for DOT file"),
+    output: Path = typer.Option(
+        "docs/weathering_dag.dot", help="Output path for DOT file"
+    ),
     format: str = typer.Option("dot", help="Output format: dot | dagitty"),
 ):
     """Export the WeatheringNet causal DAG."""
     from weatheringnet.causal.dag import WeatheringDAG
+
     d = WeatheringDAG()
     console.print(d.summary())
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -90,6 +104,7 @@ def dag(
         output.write_text(d.to_dagitty())
     else:
         import networkx as nx
+
         nx.drawing.nx_pydot.write_dot(d.graph, str(output))
     console.print(f"[green]✓ DAG exported → {output}[/green]")
 
@@ -102,10 +117,13 @@ def serve(
 ):
     """Launch the WeatheringNet dashboard API server."""
     import uvicorn
+
     console.print(f"[cyan]Starting WeatheringNet API at http://{host}:{port}[/cyan]")
     uvicorn.run(
         "weatheringnet.dashboard.backend.main:app",
-        host=host, port=port, reload=reload,
+        host=host,
+        port=port,
+        reload=reload,
     )
 
 

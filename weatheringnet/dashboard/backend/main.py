@@ -12,11 +12,9 @@ Endpoints:
     GET  /api/equity/aid-rates   : AID rate ratios by race (Roberts & Erdei 2020)
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
-import json
 
 app = FastAPI(
     title="WeatheringNet API",
@@ -35,33 +33,35 @@ app.add_middleware(
 
 # ── Pydantic Schemas ──────────────────────────────────────────────────────────
 
+
 class PredictionRequest(BaseModel):
     ali_score: float
     sdrs_score: float
-    cortisol: Optional[float] = None
-    crp: Optional[float] = None
-    systolic_bp: Optional[float] = None
-    hba1c: Optional[float] = None
-    ptsd_depression_flag: Optional[int] = 0
-    infection_pregnancy_flag: Optional[int] = 0
-    severe_life_events_flag: Optional[int] = 0
-    hla_dq2_8_flag: Optional[int] = 0
-    csection_flag: Optional[int] = 0
-    hydralazine_flag: Optional[int] = 0
-    race_ethnicity: Optional[str] = None
-    sex_offspring: Optional[str] = None
-    maternal_age: Optional[float] = None
+    cortisol: float | None = None
+    crp: float | None = None
+    systolic_bp: float | None = None
+    hba1c: float | None = None
+    ptsd_depression_flag: int | None = 0
+    infection_pregnancy_flag: int | None = 0
+    severe_life_events_flag: int | None = 0
+    hla_dq2_8_flag: int | None = 0
+    csection_flag: int | None = 0
+    hydralazine_flag: int | None = 0
+    race_ethnicity: str | None = None
+    sex_offspring: str | None = None
+    maternal_age: float | None = None
 
 
 class PredictionResponse(BaseModel):
     aid_risk_score: float
-    risk_category: str     # "Low" | "Moderate" | "High" | "Very High"
+    risk_category: str  # "Low" | "Moderate" | "High" | "Very High"
     top_contributors: list[dict]
     pathway_scores: dict
     disclaimer: str
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
 
 @app.get("/api/health")
 async def health():
@@ -78,14 +78,34 @@ async def ali_summary():
     # Placeholder structure matches pipeline output
     return {
         "groups": [
-            {"race_ethnicity": "Non_Hispanic_Black", "sex": "Female",
-             "ali_mean": 3.2, "ali_sd": 1.4, "n": 2847},
-            {"race_ethnicity": "Non_Hispanic_White", "sex": "Female",
-             "ali_mean": 2.1, "ali_sd": 1.2, "n": 4521},
-            {"race_ethnicity": "Non_Hispanic_Black", "sex": "Male",
-             "ali_mean": 2.9, "ali_sd": 1.3, "n": 2431},
-            {"race_ethnicity": "Non_Hispanic_White", "sex": "Male",
-             "ali_mean": 2.3, "ali_sd": 1.1, "n": 3987},
+            {
+                "race_ethnicity": "Non_Hispanic_Black",
+                "sex": "Female",
+                "ali_mean": 3.2,
+                "ali_sd": 1.4,
+                "n": 2847,
+            },
+            {
+                "race_ethnicity": "Non_Hispanic_White",
+                "sex": "Female",
+                "ali_mean": 2.1,
+                "ali_sd": 1.2,
+                "n": 4521,
+            },
+            {
+                "race_ethnicity": "Non_Hispanic_Black",
+                "sex": "Male",
+                "ali_mean": 2.9,
+                "ali_sd": 1.3,
+                "n": 2431,
+            },
+            {
+                "race_ethnicity": "Non_Hispanic_White",
+                "sex": "Male",
+                "ali_mean": 2.3,
+                "ali_sd": 1.1,
+                "n": 3987,
+            },
         ],
         "source": "NHANES 2010-2020",
         "method": "count",
@@ -113,12 +133,10 @@ async def ali_disparities():
 async def get_dag():
     """Return DAG structure for interactive visualization."""
     from weatheringnet.causal.dag import WeatheringDAG
+
     dag = WeatheringDAG()
     return {
-        "nodes": [
-            {"id": node, **attrs}
-            for node, attrs in dag.NODES.items()
-        ],
+        "nodes": [{"id": node, **attrs} for node, attrs in dag.NODES.items()],
         "edges": [
             {"source": cause, "target": effect, "evidence": ev}
             for cause, effect, ev in dag.EDGES
@@ -167,23 +185,48 @@ async def aid_rate_ratios():
         "source": "Roberts & Erdei (2020) Autoimmun Rev 19(1):102423",
         "comparison": "African American vs Caucasian children",
         "diseases": [
-            {"disease": "Systemic Lupus Erythematosus", "rate_ratio": 3.1,
-             "ci_95": [2.8, 3.4], "significant": True},
-            {"disease": "Polymyositis", "rate_ratio": 2.4,
-             "ci_95": [1.9, 3.0], "significant": True},
-            {"disease": "Dermatomyositis", "rate_ratio": 1.9,
-             "ci_95": [1.5, 2.4], "significant": True},
-            {"disease": "Scleroderma", "rate_ratio": 2.2,
-             "ci_95": [1.7, 2.8], "significant": True},
-            {"disease": "Autoimmune Hemolytic Anemia", "rate_ratio": 1.7,
-             "ci_95": [1.3, 2.2], "significant": True},
-            {"disease": "Autoimmune Neutropenia", "rate_ratio": 1.5,
-             "ci_95": [1.1, 2.0], "significant": True},
+            {
+                "disease": "Systemic Lupus Erythematosus",
+                "rate_ratio": 3.1,
+                "ci_95": [2.8, 3.4],
+                "significant": True,
+            },
+            {
+                "disease": "Polymyositis",
+                "rate_ratio": 2.4,
+                "ci_95": [1.9, 3.0],
+                "significant": True,
+            },
+            {
+                "disease": "Dermatomyositis",
+                "rate_ratio": 1.9,
+                "ci_95": [1.5, 2.4],
+                "significant": True,
+            },
+            {
+                "disease": "Scleroderma",
+                "rate_ratio": 2.2,
+                "ci_95": [1.7, 2.8],
+                "significant": True,
+            },
+            {
+                "disease": "Autoimmune Hemolytic Anemia",
+                "rate_ratio": 1.7,
+                "ci_95": [1.3, 2.2],
+                "significant": True,
+            },
+            {
+                "disease": "Autoimmune Neutropenia",
+                "rate_ratio": 1.5,
+                "ci_95": [1.1, 2.0],
+                "significant": True,
+            },
         ],
     }
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _compute_risk_score(req: PredictionRequest) -> float:
     """
@@ -199,21 +242,32 @@ def _compute_risk_score(req: PredictionRequest) -> float:
     score += (req.severe_life_events_flag or 0) * 0.05
     score += (req.csection_flag or 0) * 0.05
     if req.race_ethnicity == "Non_Hispanic_Black":
-        score *= 1.15   # Residual direct effect from structural racism
+        score *= 1.15  # Residual direct effect from structural racism
     return min(score, 1.0)
 
 
 def _get_contributors(req: PredictionRequest) -> list[dict]:
     return [
-        {"feature": "Allostatic Load (ALI)", "value": req.ali_score,
-         "mechanism": "Weathering → HPA dysregulation → epigenetic modification"},
-        {"feature": "Sociodemographic Risk (SDRS)", "value": req.sdrs_score,
-         "mechanism": "Structural racism → cumulative stress exposure"},
-        {"feature": "Psychological Stress (PTSD/Depression)",
-         "value": req.ptsd_depression_flag,
-         "mechanism": "Stress → estrogen/testosterone dysregulation → AID susceptibility"},
-        {"feature": "Maternal Infection", "value": req.infection_pregnancy_flag,
-         "mechanism": "Viral infection → TLR dysregulation → cross-reactivity → AID"},
+        {
+            "feature": "Allostatic Load (ALI)",
+            "value": req.ali_score,
+            "mechanism": "Weathering → HPA dysregulation → epigenetic modification",
+        },
+        {
+            "feature": "Sociodemographic Risk (SDRS)",
+            "value": req.sdrs_score,
+            "mechanism": "Structural racism → cumulative stress exposure",
+        },
+        {
+            "feature": "Psychological Stress (PTSD/Depression)",
+            "value": req.ptsd_depression_flag,
+            "mechanism": "Stress → estrogen/testosterone dysregulation → AID susceptibility",
+        },
+        {
+            "feature": "Maternal Infection",
+            "value": req.infection_pregnancy_flag,
+            "mechanism": "Viral infection → TLR dysregulation → cross-reactivity → AID",
+        },
     ]
 
 
@@ -223,7 +277,10 @@ def _get_pathway_scores(req: PredictionRequest) -> dict:
         "HPA Axis Dysregulation": round(min((req.cortisol or 10) / 20.0, 1.0) * 100, 1),
         "Inflammatory / TLR Pathway": round(min((req.crp or 1.5) / 3.0, 1.0) * 100, 1),
         "Sociodemographic / Structural": round(req.sdrs_score, 1),
-        "Psychological Stress": round((req.ptsd_depression_flag or 0) * 75.0
-                                      + (req.severe_life_events_flag or 0) * 25.0, 1),
+        "Psychological Stress": round(
+            (req.ptsd_depression_flag or 0) * 75.0
+            + (req.severe_life_events_flag or 0) * 25.0,
+            1,
+        ),
         "Genetic / Immunological": round((req.hla_dq2_8_flag or 0) * 100.0, 1),
     }

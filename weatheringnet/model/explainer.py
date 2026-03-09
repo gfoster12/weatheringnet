@@ -19,36 +19,32 @@ Feature → Mechanism mapping (grounded in paper):
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 from loguru import logger
 
-
 # Maps feature names to paper mechanisms (for publication-ready plots)
 FEATURE_MECHANISM_MAP = {
-    "ali_score":              "Allostatic Load\n(Weathering)",
-    "ali_score_count":        "Allostatic Load\n(Count Method)",
-    "cortisol":               "HPA Axis\n(Glucocorticoids)",
-    "dheas":                  "Adrenal Function\n(DHEA-S)",
-    "crp":                    "Chronic Inflammation\n(CRP)",
-    "wbc":                    "Immune Activation\n(WBC)",
-    "nlr":                    "Immune Dysregulation\n(NLR)",
-    "hba1c":                  "Metabolic Stress\n(HbA1c)",
-    "systolic_bp":            "HPA Downstream\n(Hypertension)",
-    "sdrs_score":             "Structural Racism\n(SDRS)",
-    "ptsd_depression_flag":   "Psychological Stress\n(PTSD/Depression)",
-    "infection_pregnancy_icd":"Maternal Infection\n(Cross-Reactivity)",
-    "severe_life_events_flag":"Severe Life Events\n(Prenatal Stress)",
-    "hla_dq2_8_flag":        "Genetic Risk\n(HLA-DQ2/8)",
-    "csection_flag":          "Peripartal Stress\n(C-Section)",
-    "hydralazine_flag":       "Race-Based Rx\n(Hydralazine)",
-    "sex_offspring":          "Sex-Specific\nSusceptibility",
-    "race_ethnicity":         "Race/Ethnicity\n(Structural Proxy)",
-    "food_desert_flag":       "Food Access\n(SDOH)",
-    "pcb_percentile":         "PCB Exposure\n(Environmental Racism)",
+    "ali_score": "Allostatic Load\n(Weathering)",
+    "ali_score_count": "Allostatic Load\n(Count Method)",
+    "cortisol": "HPA Axis\n(Glucocorticoids)",
+    "dheas": "Adrenal Function\n(DHEA-S)",
+    "crp": "Chronic Inflammation\n(CRP)",
+    "wbc": "Immune Activation\n(WBC)",
+    "nlr": "Immune Dysregulation\n(NLR)",
+    "hba1c": "Metabolic Stress\n(HbA1c)",
+    "systolic_bp": "HPA Downstream\n(Hypertension)",
+    "sdrs_score": "Structural Racism\n(SDRS)",
+    "ptsd_depression_flag": "Psychological Stress\n(PTSD/Depression)",
+    "infection_pregnancy_icd": "Maternal Infection\n(Cross-Reactivity)",
+    "severe_life_events_flag": "Severe Life Events\n(Prenatal Stress)",
+    "hla_dq2_8_flag": "Genetic Risk\n(HLA-DQ2/8)",
+    "csection_flag": "Peripartal Stress\n(C-Section)",
+    "hydralazine_flag": "Race-Based Rx\n(Hydralazine)",
+    "sex_offspring": "Sex-Specific\nSusceptibility",
+    "race_ethnicity": "Race/Ethnicity\n(Structural Proxy)",
+    "food_desert_flag": "Food Access\n(SDOH)",
+    "pcb_percentile": "PCB Exposure\n(Environmental Racism)",
 }
 
 
@@ -73,6 +69,7 @@ class SHAPExplainer:
         """Initialize SHAP explainer on background dataset."""
         try:
             import shap
+
             base_model = self.model._model
             # Unwrap CalibratedClassifier if needed
             if hasattr(base_model, "estimator"):
@@ -83,11 +80,13 @@ class SHAPExplainer:
             self._explainer = shap.TreeExplainer(base_model)
             logger.info("SHAP TreeExplainer initialized")
         except (ImportError, Exception) as e:
-            logger.warning(f"TreeExplainer failed ({e}), falling back to KernelExplainer")
+            logger.warning(
+                f"TreeExplainer failed ({e}), falling back to KernelExplainer"
+            )
             import shap
+
             self._explainer = shap.KernelExplainer(
-                self.model.predict_proba,
-                shap.sample(X_background, 100)
+                self.model.predict_proba, shap.sample(X_background, 100)
             )
         return self
 
@@ -107,10 +106,12 @@ class SHAPExplainer:
         Annotated with biological mechanism from paper.
         """
         shap_vals = self.compute_shap_values(X)
-        importance = pd.DataFrame({
-            "feature": self.feature_names,
-            "mean_abs_shap": np.abs(shap_vals).mean(axis=0),
-        }).sort_values("mean_abs_shap", ascending=False)
+        importance = pd.DataFrame(
+            {
+                "feature": self.feature_names,
+                "mean_abs_shap": np.abs(shap_vals).mean(axis=0),
+            }
+        ).sort_values("mean_abs_shap", ascending=False)
 
         importance["mechanism"] = importance["feature"].map(FEATURE_MECHANISM_MAP)
         importance["rank"] = range(1, len(importance) + 1)
@@ -136,8 +137,11 @@ class SHAPExplainer:
             "Psychological Stress": ["ptsd_depression_flag", "severe_life_events_flag"],
             "Genetic / Immunological": ["hla_dq2_8_flag"],
             "Sociodemographic / Structural": [
-                "sdrs_score", "race_ethnicity", "food_desert_flag",
-                "pcb_percentile", "hydralazine_flag",
+                "sdrs_score",
+                "race_ethnicity",
+                "food_desert_flag",
+                "pcb_percentile",
+                "hydralazine_flag",
             ],
             "Sex-Specific": ["sex_offspring", "csection_flag"],
         }
@@ -147,27 +151,32 @@ class SHAPExplainer:
         for pathway, features in pathway_map.items():
             pathway_features = [f for f in features if f in importance.index]
             if pathway_features:
-                pathway_scores[pathway] = importance.loc[pathway_features, "mean_abs_shap"].sum()
+                pathway_scores[pathway] = importance.loc[
+                    pathway_features, "mean_abs_shap"
+                ].sum()
             else:
                 pathway_scores[pathway] = 0.0
 
         return (
-            pd.DataFrame.from_dict(pathway_scores, orient="index", columns=["shap_importance"])
+            pd.DataFrame.from_dict(
+                pathway_scores, orient="index", columns=["shap_importance"]
+            )
             .sort_values("shap_importance", ascending=False)
             .reset_index()
             .rename(columns={"index": "pathway"})
         )
 
-    def plot_summary(self, X: pd.DataFrame, output_path: Optional[str] = None) -> None:
+    def plot_summary(self, X: pd.DataFrame, output_path: str | None = None) -> None:
         """Generate SHAP summary beeswarm plot (publication-ready)."""
         try:
-            import shap
             import matplotlib.pyplot as plt
+            import shap
 
             shap_vals = self.compute_shap_values(X)
             plt.figure(figsize=(10, 8))
             shap.summary_plot(
-                shap_vals, X,
+                shap_vals,
+                X,
                 feature_names=[
                     FEATURE_MECHANISM_MAP.get(f, f) for f in self.feature_names
                 ],

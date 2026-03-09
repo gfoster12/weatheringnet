@@ -7,24 +7,23 @@ enumerated in the paper's Background section into a single linkable score.
 """
 
 from __future__ import annotations
+
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from loguru import logger
 from sklearn.preprocessing import MinMaxScaler
 
-from weatheringnet.sdrs.sources import load_adi, load_svi, load_ejscreen, load_fara
-
+from weatheringnet.sdrs.sources import load_adi, load_ejscreen, load_fara, load_svi
 
 # Component weights — can be overridden via config
 # Default weights reflect paper's emphasis on stress/inflammation pathways
 DEFAULT_WEIGHTS = {
-    "adi_natrank":              0.25,   # SES disadvantage — primary weathering driver
-    "svi_total":                0.25,   # Multi-domain vulnerability
-    "ej_index":                 0.25,   # PCB/pollution — explicitly cited for Black women
-    "food_desert_flag":         0.15,   # Diet/formula — cited as early AID risk
-    "svi_theme3_minority":      0.10,   # Racial minority concentration (structural racism proxy)
+    "adi_natrank": 0.25,  # SES disadvantage — primary weathering driver
+    "svi_total": 0.25,  # Multi-domain vulnerability
+    "ej_index": 0.25,  # PCB/pollution — explicitly cited for Black women
+    "food_desert_flag": 0.15,  # Diet/formula — cited as early AID risk
+    "svi_theme3_minority": 0.10,  # Racial minority concentration (structural racism proxy)
 }
 
 
@@ -68,11 +67,7 @@ class SDRSScorer:
 
         # Aggregate ADI to tract level (mean of block groups within tract)
         if "fips_tract" in adi.columns:
-            adi_tract = (
-                adi.groupby("fips_tract")["adi_natrank"]
-                .mean()
-                .reset_index()
-            )
+            adi_tract = adi.groupby("fips_tract")["adi_natrank"].mean().reset_index()
         else:
             adi_tract = pd.DataFrame(columns=["fips_tract", "adi_natrank"])
 
@@ -100,16 +95,19 @@ class SDRSScorer:
         weights_used = {c: self.weights[c] for c in component_cols}
         total_weight = sum(weights_used.values())
         sdrs_score = sum(
-            X_norm[f"sdrs_{c}"] * (w / total_weight)
-            for c, w in weights_used.items()
+            X_norm[f"sdrs_{c}"] * (w / total_weight) for c, w in weights_used.items()
         )
 
         merged["sdrs_score"] = sdrs_score
-        result = pd.concat([merged[["fips_tract"]], X_norm, merged[["sdrs_score"]]], axis=1)
+        result = pd.concat(
+            [merged[["fips_tract"]], X_norm, merged[["sdrs_score"]]], axis=1
+        )
         self._tract_scores = result
 
         logger.info(f"SDRS built for {len(result):,} census tracts")
-        logger.info(f"SDRS mean={result['sdrs_score'].mean():.1f}, sd={result['sdrs_score'].std():.1f}")
+        logger.info(
+            f"SDRS mean={result['sdrs_score'].mean():.1f}, sd={result['sdrs_score'].std():.1f}"
+        )
         return result
 
     def lookup(self, fips_tracts: pd.Series) -> pd.Series:

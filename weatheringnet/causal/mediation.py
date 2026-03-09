@@ -21,7 +21,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from loguru import logger
-from typing import Optional
 
 
 class MediationAnalyzer:
@@ -50,7 +49,7 @@ class MediationAnalyzer:
         exposure: str = "race_ses_binary",
         mediator: str | list[str] = "ali_score",
         outcome: str = "aid_diagnosis",
-        covariates: Optional[list[str]] = None,
+        covariates: list[str] | None = None,
     ):
         self.exposure = exposure
         self.mediator = mediator if isinstance(mediator, list) else [mediator]
@@ -81,8 +80,10 @@ class MediationAnalyzer:
         logger.info(f"Mediation analysis: n={n:,} complete cases")
 
         try:
-            from sklearn.linear_model import LogisticRegression, LinearRegression
             import warnings
+
+            from sklearn.linear_model import LinearRegression, LogisticRegression
+
             warnings.filterwarnings("ignore")
 
             covar_cols = [c for c in self.covariates if c in data.columns]
@@ -90,7 +91,9 @@ class MediationAnalyzer:
             # Step 1: Total effect (exposure → outcome, no mediator)
             X_total = data[[self.exposure] + covar_cols].values
             if data[self.outcome].nunique() == 2:
-                model_total = LogisticRegression(max_iter=500).fit(X_total, data[self.outcome])
+                model_total = LogisticRegression(max_iter=500).fit(
+                    X_total, data[self.outcome]
+                )
                 total_effect = model_total.coef_[0][0]
             else:
                 model_total = LinearRegression().fit(X_total, data[self.outcome])
@@ -108,18 +111,22 @@ class MediationAnalyzer:
                 # Step 3: Mediator + exposure → outcome
                 X_outcome = data[[self.exposure, med] + covar_cols].values
                 if data[self.outcome].nunique() == 2:
-                    model_b = LogisticRegression(max_iter=500).fit(X_outcome, data[self.outcome])
+                    model_b = LogisticRegression(max_iter=500).fit(
+                        X_outcome, data[self.outcome]
+                    )
                     b_coef = model_b.coef_[0][1]  # mediator → outcome
                 else:
                     model_b = LinearRegression().fit(X_outcome, data[self.outcome])
                     b_coef = model_b.coef_[1]
 
-                nie = a_coef * b_coef   # product-of-coefficients method
+                nie = a_coef * b_coef  # product-of-coefficients method
                 mediated_effects.append((med, a_coef, b_coef, nie))
 
             total_nie = sum(nie for _, _, _, nie in mediated_effects)
             nde = total_effect - total_nie
-            prop_mediated = total_nie / total_effect if total_effect != 0 else float("nan")
+            prop_mediated = (
+                total_nie / total_effect if total_effect != 0 else float("nan")
+            )
 
             results = {
                 "n": n,
@@ -213,7 +220,7 @@ def identify_adjustment_set(
     exposure: str = "race_ses",
     outcome: str = "aid_risk",
     method: str = "backdoor",
-) -> list[str]:
+) -> dict | list:
     """
     Identify the minimal sufficient adjustment set to identify the
     causal effect of exposure on outcome given the WeatheringDAG.
@@ -231,7 +238,7 @@ def identify_adjustment_set(
 
     Returns
     -------
-    list[str] : variables to condition on for identification
+    dict | list : adjustment set info or empty list if not found
     """
     # Simplified: return known valid adjustment set based on DAG structure
     # For the weathering DAG, conditioning on measured confounders

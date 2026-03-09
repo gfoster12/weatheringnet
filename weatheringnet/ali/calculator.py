@@ -12,19 +12,19 @@ Methods:
 
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
 import pandas as pd
 from loguru import logger
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from typing import Literal
 
 from weatheringnet.ali.biomarkers import (
     BIOMARKER_REGISTRY,
     PRIMARY_ALI_BIOMARKERS,
     RiskDirection,
 )
-
 
 ScoringMethod = Literal["count", "z_score", "pca"]
 
@@ -126,7 +126,9 @@ class ALICalculator:
 
         return result
 
-    def fit_transform(self, df: pd.DataFrame, group_col: str | None = None) -> pd.DataFrame:
+    def fit_transform(
+        self, df: pd.DataFrame, group_col: str | None = None
+    ) -> pd.DataFrame:
         return self.fit(df, group_col).transform(df)
 
     # ── Private Methods ────────────────────────────────────────────────────────
@@ -141,7 +143,9 @@ class ALICalculator:
             elif key in df.columns:
                 cols[key] = df[key]
             else:
-                logger.warning(f"Biomarker '{key}' not found in DataFrame — will be NaN.")
+                logger.warning(
+                    f"Biomarker '{key}' not found in DataFrame — will be NaN."
+                )
                 cols[key] = np.nan
         return pd.DataFrame(cols, index=df.index)
 
@@ -190,5 +194,7 @@ class ALICalculator:
         between race/sex groups.
         """
         result = self.transform(df)
-        flag_cols = [c for c in result.columns if c.startswith("ali_") and c != "ali_score"]
+        flag_cols = [
+            c for c in result.columns if c.startswith("ali_") and c != "ali_score"
+        ]
         return result[flag_cols].mean().sort_values(ascending=False)

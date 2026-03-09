@@ -11,17 +11,15 @@ Design choices:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from loguru import logger
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -50,7 +48,7 @@ class AIDRiskModel:
         self.calibrate = calibrate
         self.fairness_groups = fairness_groups
         self.random_state = random_state
-        self._model = None
+        self._model: Any = None
         self._feature_names: list[str] = []
         self._label_encoders: dict = {}
 
@@ -59,14 +57,15 @@ class AIDRiskModel:
         if self.model_type == "xgboost":
             try:
                 from xgboost import XGBClassifier
+
                 base = XGBClassifier(
                     n_estimators=500,
                     learning_rate=0.05,
                     max_depth=6,
                     subsample=0.8,
                     colsample_bytree=0.8,
-                    scale_pos_weight=5,     # handles class imbalance (AID is rare)
-                    eval_metric="aucpr",    # precision-recall AUC for imbalanced outcome
+                    scale_pos_weight=5,  # handles class imbalance (AID is rare)
+                    eval_metric="aucpr",  # precision-recall AUC for imbalanced outcome
                     tree_method="hist",
                     random_state=self.random_state,
                     verbosity=0,
@@ -75,8 +74,11 @@ class AIDRiskModel:
                 raise ImportError("Install xgboost: pip install xgboost")
         elif self.model_type == "logistic":
             from sklearn.linear_model import LogisticRegression
+
             base = LogisticRegression(
-                C=0.1, max_iter=1000, class_weight="balanced",
+                C=0.1,
+                max_iter=1000,
+                class_weight="balanced",
                 random_state=self.random_state,
             )
         else:
@@ -91,7 +93,7 @@ class AIDRiskModel:
         self,
         X: pd.DataFrame,
         y: pd.Series,
-        eval_set: Optional[tuple] = None,
+        eval_set: tuple | None = None,
     ) -> AIDRiskModel:
         """
         Train the model.
@@ -108,7 +110,9 @@ class AIDRiskModel:
         X_enc = self._encode_categoricals(X, fit=True)
         self._model.fit(X_enc, y)
 
-        logger.info(f"Model trained on {len(X):,} samples, {len(self._feature_names)} features")
+        logger.info(
+            f"Model trained on {len(X):,} samples, {len(self._feature_names)} features"
+        )
         return self
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
@@ -133,7 +137,9 @@ class AIDRiskModel:
         """
         self.build_model()
         X_enc = self._encode_categoricals(X, fit=True)
-        skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=self.random_state)
+        skf = StratifiedKFold(
+            n_splits=n_folds, shuffle=True, random_state=self.random_state
+        )
 
         aurocs, auprcs = [], []
         for fold, (train_idx, val_idx) in enumerate(skf.split(X_enc, y)):
@@ -143,7 +149,9 @@ class AIDRiskModel:
             proba = self._model.predict_proba(X_val)[:, 1]
             aurocs.append(roc_auc_score(y_val, proba))
             auprcs.append(average_precision_score(y_val, proba))
-            logger.info(f"Fold {fold+1}: AUROC={aurocs[-1]:.3f}, AUPRC={auprcs[-1]:.3f}")
+            logger.info(
+                f"Fold {fold+1}: AUROC={aurocs[-1]:.3f}, AUPRC={auprcs[-1]:.3f}"
+            )
 
         results = {
             "auroc_mean": float(np.mean(aurocs)),
@@ -161,20 +169,25 @@ class AIDRiskModel:
     def save(self, path: str | Path) -> None:
         """Save model to disk."""
         import pickle
+
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
-            pickle.dump({
-                "model": self._model,
-                "feature_names": self._feature_names,
-                "label_encoders": self._label_encoders,
-            }, f)
+            pickle.dump(
+                {
+                    "model": self._model,
+                    "feature_names": self._feature_names,
+                    "label_encoders": self._label_encoders,
+                },
+                f,
+            )
         logger.info(f"Model saved → {path}")
 
     @classmethod
     def load(cls, path: str | Path) -> AIDRiskModel:
         """Load saved model."""
         import pickle
+
         with open(path, "rb") as f:
             state = pickle.load(f)
         obj = cls()
@@ -195,7 +208,9 @@ class AIDRiskModel:
             else:
                 if col in self._label_encoders:
                     le = self._label_encoders[col]
-                    X_enc[col] = X[col].astype(str).map(
-                        lambda x: le.transform([x])[0] if x in le.classes_ else -1
+                    X_enc[col] = (
+                        X[col]
+                        .astype(str)
+                        .map(lambda x: le.transform([x])[0] if x in le.classes_ else -1)
                     )
         return X_enc

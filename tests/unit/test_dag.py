@@ -1,6 +1,7 @@
 """Tests for WeatheringDAG structure and causal assumptions."""
 
 import pytest
+
 from weatheringnet.causal.dag import WeatheringDAG
 
 
@@ -20,10 +21,14 @@ class TestWeatheringDAG:
     def test_dag_is_acyclic(self, dag):
         """DAG must be acyclic — cycles invalidate causal identification."""
         import networkx as nx
-        assert nx.is_directed_acyclic_graph(dag.graph), "DAG contains cycles — invalid causal model"
+
+        assert nx.is_directed_acyclic_graph(
+            dag.graph
+        ), "DAG contains cycles — invalid causal model"
 
     def test_path_exists_from_exposure_to_outcome(self, dag):
         import networkx as nx
+
         assert nx.has_path(dag.graph, "race_ses", "aid_risk")
 
     def test_stress_pathway_present(self, dag):
@@ -57,4 +62,6 @@ class TestWeatheringDAG:
         """Every edge should cite a source — enforces evidence-based DAG construction."""
         for cause, effect, evidence in dag.EDGES:
             assert evidence, f"Edge {cause}→{effect} has no evidence citation"
-            assert len(evidence) > 5, f"Edge {cause}→{effect} evidence too short: '{evidence}'"
+            assert (
+                len(evidence) > 5
+            ), f"Edge {cause}→{effect} evidence too short: '{evidence}'"

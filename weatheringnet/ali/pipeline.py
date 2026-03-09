@@ -19,8 +19,8 @@ import pandas as pd
 import yaml
 from loguru import logger
 
-from weatheringnet.ali.calculator import ALICalculator
-from weatheringnet.ali.biomarkers import PRIMARY_ALI_BIOMARKERS, EXTENDED_ALI_BIOMARKERS
+from weatheringnet.ali.biomarkers import PRIMARY_ALI_BIOMARKERS
+from weatheringnet.ali.calculator import ALICalculator, ScoringMethod
 
 # NHANES racial classification codes (RIDRETH3)
 RACE_MAP = {
@@ -35,7 +35,14 @@ RACE_MAP = {
 SEX_MAP = {1: "Male", 2: "Female"}
 
 # NHANES cycles available for this pipeline
-NHANES_CYCLES = ["2009-2010", "2011-2012", "2013-2014", "2015-2016", "2017-2018", "2019-2020"]
+NHANES_CYCLES = [
+    "2009-2010",
+    "2011-2012",
+    "2013-2014",
+    "2015-2016",
+    "2017-2018",
+    "2019-2020",
+]
 
 
 def load_nhanes_cycle(data_dir: Path, cycle: str) -> pd.DataFrame:
@@ -55,7 +62,9 @@ def load_nhanes_cycle(data_dir: Path, cycle: str) -> pd.DataFrame:
     """
     cycle_dir = data_dir / cycle
     if not cycle_dir.exists():
-        logger.warning(f"Cycle directory not found: {cycle_dir}. Run download_nhanes.py first.")
+        logger.warning(
+            f"Cycle directory not found: {cycle_dir}. Run download_nhanes.py first."
+        )
         return pd.DataFrame()
 
     xpt_files = list(cycle_dir.glob("*.XPT")) + list(cycle_dir.glob("*.xpt"))
@@ -76,7 +85,11 @@ def load_nhanes_cycle(data_dir: Path, cycle: str) -> pd.DataFrame:
         if "SEQN" not in df.columns:
             continue
         df = df.set_index("SEQN")
-        combined = df if combined is None else combined.join(df, how="outer", rsuffix=f"_{name}")
+        combined = (
+            df
+            if combined is None
+            else combined.join(df, how="outer", rsuffix=f"_{name}")
+        )
 
     if combined is None:
         return pd.DataFrame()
@@ -117,7 +130,7 @@ def preprocess_nhanes(df: pd.DataFrame) -> pd.DataFrame:
 
 def compute_stratified_ali(
     df: pd.DataFrame,
-    method: str = "count",
+    method: ScoringMethod = "count",
     stratify_by: list[str] = ["race_ethnicity", "sex"],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
@@ -138,8 +151,14 @@ def compute_stratified_ali(
         summary = (
             individual.groupby(valid_strata)["ali_score"]
             .agg(["mean", "std", "median", "count"])
-            .rename(columns={"mean": "ali_mean", "std": "ali_sd",
-                             "median": "ali_median", "count": "n"})
+            .rename(
+                columns={
+                    "mean": "ali_mean",
+                    "std": "ali_sd",
+                    "median": "ali_median",
+                    "count": "n",
+                }
+            )
             .reset_index()
         )
     else:
@@ -180,12 +199,18 @@ def run_ali_pipeline(config_path: str | Path) -> dict[str, pd.DataFrame]:
         all_cycles.append(processed)
 
     if not all_cycles:
-        raise RuntimeError("No NHANES data loaded. Run scripts/download_nhanes.py first.")
+        raise RuntimeError(
+            "No NHANES data loaded. Run scripts/download_nhanes.py first."
+        )
 
     combined = pd.concat(all_cycles, ignore_index=True)
-    logger.info(f"Combined dataset: {len(combined):,} participants across {len(all_cycles)} cycles")
+    logger.info(
+        f"Combined dataset: {len(combined):,} participants across {len(all_cycles)} cycles"
+    )
 
-    individual, summary = compute_stratified_ali(combined, method=method)
+    individual, summary = compute_stratified_ali(
+        combined, method=method  # type: ignore[arg-type]
+    )
 
     # Save outputs
     individual.to_parquet(output_dir / "ali_individual.parquet", index=False)

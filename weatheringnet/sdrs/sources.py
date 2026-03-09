@@ -6,6 +6,7 @@ standardizes it to a census-tract-level DataFrame with FIPS key.
 """
 
 from __future__ import annotations
+
 from enum import Enum
 from pathlib import Path
 
@@ -22,6 +23,7 @@ class DataSource(str, Enum):
 
 # ── ADI ───────────────────────────────────────────────────────────────────────
 
+
 def load_adi(data_dir: Path) -> pd.DataFrame:
     """
     Load Area Deprivation Index.
@@ -37,21 +39,28 @@ def load_adi(data_dir: Path) -> pd.DataFrame:
     """
     adi_file = data_dir / "adi" / "US_2021_ADI_Census_Block_Group_v3.2.csv"
     if not adi_file.exists():
-        logger.warning(f"ADI file not found at {adi_file}. Download from neighborhoodatlas.medicine.wisc.edu")
+        logger.warning(
+            f"ADI file not found at {adi_file}. Download from neighborhoodatlas.medicine.wisc.edu"
+        )
         return pd.DataFrame(columns=["fips", "adi_natrank", "adi_staternk"])
 
     df = pd.read_csv(adi_file, dtype={"FIPS": str})
-    df = df.rename(columns={
-        "FIPS": "fips",
-        "ADI_NATRANK": "adi_natrank",
-        "ADI_STATERNK": "adi_staternk",
-    })
+    df = df.rename(
+        columns={
+            "FIPS": "fips",
+            "ADI_NATRANK": "adi_natrank",
+            "ADI_STATERNK": "adi_staternk",
+        }
+    )
     # Aggregate to census tract (first 11 digits of 12-digit FIPS)
     df["fips_tract"] = df["fips"].str[:11]
-    return df[["fips", "fips_tract", "adi_natrank", "adi_staternk"]].dropna(subset=["adi_natrank"])
+    return df[["fips", "fips_tract", "adi_natrank", "adi_staternk"]].dropna(
+        subset=["adi_natrank"]
+    )
 
 
 # ── SVI ───────────────────────────────────────────────────────────────────────
+
 
 def load_svi(data_dir: Path, year: int = 2020) -> pd.DataFrame:
     """
@@ -87,13 +96,14 @@ def load_svi(data_dir: Path, year: int = 2020) -> pd.DataFrame:
         "E_POV150": "n_poverty_150pct",
     }
     df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
-    df = df.replace(-999, float("nan"))   # SVI uses -999 for missing
+    df = df.replace(-999, float("nan"))  # SVI uses -999 for missing
 
     keep = [c for c in col_map.values() if c in df.columns]
     return df[keep]
 
 
 # ── EJScreen ──────────────────────────────────────────────────────────────────
+
 
 def load_ejscreen(data_dir: Path) -> pd.DataFrame:
     """
@@ -113,7 +123,9 @@ def load_ejscreen(data_dir: Path) -> pd.DataFrame:
     """
     ej_file = data_dir / "ejscreen" / "EJSCREEN_2023_Tracts_with_AS_CNMI_GU_VI.csv"
     if not ej_file.exists():
-        logger.warning(f"EJScreen file not found at {ej_file}. Download from epa.gov/ejscreen")
+        logger.warning(
+            f"EJScreen file not found at {ej_file}. Download from epa.gov/ejscreen"
+        )
         return pd.DataFrame(columns=["fips_tract", "ej_index"])
 
     df = pd.read_csv(ej_file, dtype={"ID": str}, low_memory=False)
@@ -132,6 +144,7 @@ def load_ejscreen(data_dir: Path) -> pd.DataFrame:
 
 
 # ── USDA FARA ─────────────────────────────────────────────────────────────────
+
 
 def load_fara(data_dir: Path) -> pd.DataFrame:
     """
@@ -161,6 +174,11 @@ def load_fara(data_dir: Path) -> pd.DataFrame:
     if "LILATracts_1And10" in df.columns:
         df["food_desert_flag"] = df["LILATracts_1And10"]
 
-    keep_cols = ["fips_tract", "food_desert_flag", "Urban",
-                 "PovertyRate", "MedianFamilyIncome"]
+    keep_cols = [
+        "fips_tract",
+        "food_desert_flag",
+        "Urban",
+        "PovertyRate",
+        "MedianFamilyIncome",
+    ]
     return df[[c for c in keep_cols if c in df.columns]]
