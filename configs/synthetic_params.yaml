@@ -1,0 +1,824 @@
+# =============================================================================
+# WeatheringNet Synthetic Data Parameters
+# =============================================================================
+# Purpose: Parameterize synthetic cohort generation from published literature.
+#          Every numeric value must trace to a citeable source.
+#          NHANES microdata not used; this enables fully self-contained
+#          `make reproduce-paper` without data-access agreements.
+#
+# Maintainer: Gabrielle Foster <https://orcid.org/0000-0003-2620-1065>
+# Last updated: 2026-03-09
+# Schema version: 0.2.0
+#
+# Citation key format: AuthorYYYY
+# Full references in docs/references.bib
+# =============================================================================
+
+metadata:
+  schema_version: "0.2.0"
+  project: "WeatheringNet"
+  description: >
+    Parameters for synthetic cohort simulation study. Values derived from
+    published summary statistics; not raw microdata. Simulation approach
+    follows precedent of Foster (2023), parameterized from six uploaded
+    source papers and two targeted literature searches.
+  primary_sources:
+    - key: Geronimus2006
+      citation: >
+        Geronimus AT, Hicken M, Keene D, Bound J. "Weathering" and age
+        patterns of allostatic load scores among Blacks and Whites in the
+        United States. Am J Public Health. 2006;96(5):826–833.
+        doi:10.2105/AJPH.2004.060749
+      data_used: [ALI_thresholds, ALI_score_distributions, race_odds_ratios]
+    - key: Roberts2020
+      citation: >
+        Roberts MH, Erdei E. Comparative United States autoimmune disease
+        rates for 2010–2016 by sex, geographic region, and race. Autoimmun
+        Rev. 2020;19(1):102423. doi:10.1016/j.autrev.2019.102423
+      data_used: [AID_prevalence_rates, AID_race_ratios]
+    - key: Khera2005
+      citation: >
+        Khera A, McGuire DK, Murphy SA, et al. Race and gender differences
+        in C-reactive protein levels. J Am Coll Cardiol. 2005;46(3):464–469.
+        doi:10.1016/j.jacc.2005.04.051
+      data_used: [CRP_distributions_by_race_sex, CRP_odds_ratios]
+    - key: Suglia2010
+      citation: >
+        Suglia SF, Staudenmayer J, Cohen S, Enlow MB, Rich-Edwards JW,
+        Wright RJ. Cumulative stress and cortisol disruption among Black and
+        Hispanic pregnant women in an urban cohort. Psychol Trauma.
+        2010;2(4):326–334. doi:10.1037/a0018953
+      data_used: [cortisol_by_race_stress, stress_prevalence_pregnant]
+    - key: Brew2022
+      citation: >
+        Brew BK, Lundholm C, Vieira AR, Almqvist C. Early-life adversity due
+        to bereavement and risk of inflammatory diseases in the next
+        generation. Am J Epidemiol. 2022;191(1):38–48.
+        doi:10.1093/aje/kwab208
+      data_used: [transgenerational_autoimmune_HR, AID_incidence_rates]
+    - key: Simons2021
+      citation: >
+        Simons RL, Lei MK, Klopack E, Beach SR, Gibbons FX, Philibert RA.
+        Racial discrimination, inflammation, and chronic illness among African
+        American women at midlife: support for the weathering perspective.
+        J Racial Ethn Health Disparities. 2021;8(2):339–349.
+        doi:10.1007/s40615-020-00786-8
+      data_used: [discrimination_inflammation_beta, inflammation_chronic_IRR,
+                  BMI_midlife_Black_women, chronic_disease_prevalence]
+    - key: Flegal2016
+      citation: >
+        Flegal KM, Kruszon-Moran D, Carroll MD, Fryar CD, Ogden CL. Trends
+        in obesity among adults in the United States, 2005 to 2014. JAMA.
+        2016;315(21):2284–2291. doi:10.1001/jama.2016.6458
+      data_used: [obesity_prevalence_by_race_sex]
+    - key: Lundgren2018
+      citation: >
+        Lundgren M, Ellström K, Elding Larsson H; DiPiS study group.
+        Influence of early-life parental severe life events on the risk of
+        type 1 diabetes in children: the DiPiS study. Acta Diabetol.
+        2018;55(8):797–804. doi:10.1007/s00592-018-1150-y
+      data_used: [T1D_stress_hazard_ratio]
+
+# =============================================================================
+# SECTION 1: POPULATION DEMOGRAPHICS
+# Parameters for synthetic cohort composition
+# =============================================================================
+
+population:
+  n_synthetic: 10000   # development/iteration runs — see DECISION-025
+  n_synthetic_paper: 50000  # final paper run; override via: make reproduce-paper N=50000
+  # DECISION-025: power analysis confirms n=10k adequate for analyses A,C,D,G;
+  # n=50k required for E (transgenerational AID HR=1.31) and F (DQ2/8 T1D HR=2.17).
+  # Analysis B (SLE individual RR) is underpowered at any feasible n; use composite AID.
+  target_age_range: [20, 65]
+
+  race_sex_strata:
+    # Strata labels match NHANES convention used in Geronimus2006
+    # Proportions reflect approximate NHANES IV (1999-2002) adult distribution
+    # used in Geronimus2006; exact proportions are analytic weights not reported
+    # as marginals, so proportions below are derived from U.S. Census 2000
+    # adult distribution as a reasonable approximation.
+    NHB_women:
+      label: "Non-Hispanic Black Women"
+      approx_population_fraction: 0.068  # Census 2000 approximation
+    NHB_men:
+      label: "Non-Hispanic Black Men"
+      approx_population_fraction: 0.059
+    NHW_women:
+      label: "Non-Hispanic White Women"
+      approx_population_fraction: 0.356
+    NHW_men:
+      label: "Non-Hispanic White Men"
+      approx_population_fraction: 0.342
+    Hispanic_women:
+      label: "Hispanic Women"
+      approx_population_fraction: 0.085
+    Hispanic_men:
+      label: "Hispanic Men"
+      approx_population_fraction: 0.090
+
+  age_groups:
+    # Age groupings from Geronimus2006 Table 1 (10-year bands, 25-64)
+    young_adult: [25, 34]
+    mid_adult:   [35, 44]
+    mid_late:    [45, 54]
+    older_adult: [55, 64]
+
+# =============================================================================
+# SECTION 2: ALLOSTATIC LOAD INDEX (ALI)
+# Based on Geronimus2006 NHANES IV 10-biomarker algorithm
+# =============================================================================
+
+allostatic_load:
+  biomarker_algorithm: "Geronimus2006_NHANES_IV"
+  n_biomarkers: 10
+  # Source: Geronimus et al. (2006) Table 1 footnote — high-risk thresholds
+  # defined as quartile-based cut-points from NHANES IV reference population
+
+  biomarker_thresholds:
+    # Each threshold defines the "high-risk" cut-point (≥ or ≤ as indicated)
+    # Direction: "above" = high-risk if value exceeds threshold
+    #            "below" = high-risk if value falls below threshold
+    # Source for all thresholds: Geronimus2006, Table 1 footnote
+
+    systolic_bp:
+      unit: "mmHg"
+      high_risk_above: 127
+      citation: Geronimus2006
+
+    diastolic_bp:
+      unit: "mmHg"
+      high_risk_above: 80
+      citation: Geronimus2006
+
+    bmi:
+      unit: "kg/m2"
+      high_risk_above: 30.9
+      citation: Geronimus2006
+
+    hba1c:
+      unit: "percent"
+      high_risk_above: 5.4
+      citation: Geronimus2006
+
+    albumin:
+      unit: "g/dL"
+      high_risk_below: 4.2    # low albumin = high risk
+      citation: Geronimus2006
+
+    creatinine_clearance:
+      unit: "mg/dL"           # note: Geronimus2006 uses mg/dL
+      high_risk_below: 66
+      citation: Geronimus2006
+
+    triglycerides:
+      unit: "mg/dL"
+      high_risk_above: 168
+      citation: Geronimus2006
+
+    crp:
+      unit: "mg/dL"
+      high_risk_above: 0.41   # = ~4.1 mg/L; Geronimus uses mg/dL convention
+      citation: Geronimus2006
+
+    homocysteine:
+      unit: "micromol/L"
+      high_risk_above: 9.0
+      citation: Geronimus2006
+
+    total_cholesterol:
+      unit: "mg/dL"
+      high_risk_above: 225
+      citation: Geronimus2006
+
+  # ALI score = count of biomarkers in high-risk range (0–10)
+  # High ALI defined as score ≥ 4 (Geronimus2006)
+  high_ali_cutoff: 4
+
+  score_distributions:
+    # Source: Geronimus2006 Table 1
+    # Mean ALI score and % with high score (≥4) by race/sex/age group
+    # Age groups: 25-34, 35-44, 45-54, 55-64
+
+    NHB_women:
+      age_25_34:
+        mean_score: 1.8
+        pct_high_score: 16.0   # % with ALI ≥ 4
+        citation: Geronimus2006_Table1
+      age_35_44:
+        mean_score: 2.7
+        pct_high_score: 30.0
+        citation: Geronimus2006_Table1
+      age_45_54:
+        mean_score: 3.5
+        pct_high_score: 45.0
+        citation: Geronimus2006_Table1
+      age_55_64:
+        mean_score: 4.0
+        pct_high_score: 56.0
+        citation: Geronimus2006_Table1
+
+    NHW_women:
+      age_25_34:
+        mean_score: 1.2
+        pct_high_score: 8.0
+        citation: Geronimus2006_Table1
+      age_35_44:
+        mean_score: 1.8
+        pct_high_score: 16.0
+        citation: Geronimus2006_Table1
+      age_45_54:
+        mean_score: 2.5
+        pct_high_score: 24.0
+        citation: Geronimus2006_Table1
+      age_55_64:
+        mean_score: 3.0
+        pct_high_score: 35.0
+        citation: Geronimus2006_Table1
+
+    NHB_men:
+      age_25_34:
+        mean_score: 1.5
+        pct_high_score: 11.0
+        citation: Geronimus2006_Table1
+      age_35_44:
+        mean_score: 2.1
+        pct_high_score: 21.0
+        citation: Geronimus2006_Table1
+      age_45_54:
+        mean_score: 2.9
+        pct_high_score: 31.0
+        citation: Geronimus2006_Table1
+      age_55_64:
+        mean_score: 3.5
+        pct_high_score: 41.0
+        citation: Geronimus2006_Table1
+
+    NHW_men:
+      age_25_34:
+        mean_score: 1.3
+        pct_high_score: 9.0
+        citation: Geronimus2006_Table1
+      age_35_44:
+        mean_score: 2.0
+        pct_high_score: 17.0
+        citation: Geronimus2006_Table1
+      age_45_54:
+        mean_score: 2.6
+        pct_high_score: 26.0
+        citation: Geronimus2006_Table1
+      age_55_64:
+        mean_score: 3.1
+        pct_high_score: 36.0
+        citation: Geronimus2006_Table1
+
+  # Race odds ratios for high ALI score (≥4) vs NHW same sex
+  # Source: Geronimus2006 Table 2
+  # These are RELATIVE ODDS RATIOS age-adjusted within sex
+  race_odds_ratios:
+    NHB_vs_NHW_women:
+      or_25_34: 2.3
+      or_35_44: 2.2
+      or_45_54: 2.0
+      or_55_64: 1.9
+      note: >
+        Weathering pattern: Black-White OR narrows at older ages but Black
+        women maintain significantly higher ALI burden across all age groups.
+      citation: Geronimus2006_Table2
+
+    NHB_vs_NHW_men:
+      or_25_34: 1.5
+      or_35_44: 1.5
+      or_45_54: 1.4
+      or_55_64: 1.4
+      note: >
+        Race gap in ALI is smaller for men than women, consistent with
+        the weathering hypothesis being particularly pronounced in women.
+      citation: Geronimus2006_Table2
+
+# =============================================================================
+# SECTION 3: C-REACTIVE PROTEIN (CRP)
+# Based on Khera2005 Dallas Heart Study (n=2,749, ages 30–65)
+# =============================================================================
+
+crp:
+  source_study: "Dallas Heart Study"
+  source_n: 2749
+  source_age_range: [30, 65]
+  citation: Khera2005
+
+  unit: "mg/L"
+  clinical_high_risk_threshold: 3.0   # American Heart Association high-risk cutoff
+
+  # Median CRP by race/sex — Khera2005 Figure 2
+  median_by_race_sex:
+    NHW_men:    1.7
+    NHB_men:    2.1
+    NHW_women:  3.3
+    NHB_women:  3.5
+    citation: Khera2005_Figure2
+
+  # Percent with CRP > 3 mg/L — Khera2005 Table 4 (sample-weight adjusted)
+  pct_above_3_by_race_sex:
+    NHW_men:
+      pct: 30.9
+      citation: Khera2005_Table4
+    NHB_men:
+      pct: 39.7
+      citation: Khera2005_Table4
+    NHW_women:
+      pct: 51.2
+      citation: Khera2005_Table4
+    NHB_women:
+      pct: 57.5
+      citation: Khera2005_Table4
+
+  # Adjusted odds ratios vs NHW men (reference) — Khera2005 Table 4
+  # Full covariate adjustment (age, BMI, smoking, physical activity, alcohol,
+  # waist circumference, lipid-lowering medications, hormone use in women)
+  adjusted_or_vs_NHW_men:
+    NHB_men:
+      or: 1.4
+      ci_lower: 0.9
+      ci_upper: 2.1
+      p_value: 0.10        # not statistically significant after full adjustment
+      citation: Khera2005_Table4
+    NHW_women:
+      or: 1.6
+      ci_lower: 1.1
+      ci_upper: 2.5
+      p_value: 0.02
+      citation: Khera2005_Table4
+    NHB_women:
+      or: 1.7
+      ci_lower: 1.2
+      ci_upper: 2.6
+      p_value: 0.007
+      citation: Khera2005_Table4
+
+  # BMI-CRP note: Khera2005 reports BMI correlation with CRP stronger in women
+  bmi_crp_correlation_sex_moderation:
+    stronger_in_women: true
+    NHB_women_mean_bmi: 33.0   # kg/m2 — Khera2005 Table 1
+    citation: Khera2005
+
+# =============================================================================
+# SECTION 4: CORTISOL & PRENATAL STRESS
+# Based on Suglia2010 ACCESS cohort (n=200, ~28 weeks gestation)
+# Population: Black and Hispanic pregnant women, urban Boston
+# =============================================================================
+
+cortisol_prenatal:
+  source_study: "ACCESS cohort"
+  source_n: 200
+  source_gestational_age_weeks: 28   # approximate
+  citation: Suglia2010
+  unit: "nmol/L"
+
+  # Salivary cortisol collection protocol: Time 1 = awakening, Time 2 = 45 min post-wake
+  # Diurnal slope = Time 1 minus Time 2 (positive = expected morning rise)
+
+  morning_cortisol_by_race:
+    # Time 1 (awakening) cortisol — Suglia2010 Table 2
+    Black_women:
+      time1_mean: 14.9
+      time1_sd:   9.1
+      time2_mean: 15.7
+      time2_sd:   9.8
+      diurnal_slope_mean: -1.43   # negative = blunted slope (T2 > T1 on average)
+      diurnal_slope_sd:   0.9
+      citation: Suglia2010_Table2
+    Hispanic_women:
+      time1_mean: 15.9
+      time1_sd:   7.8
+      time2_mean: 17.5
+      time2_sd:   9.7
+      diurnal_slope_mean: -1.73
+      diurnal_slope_sd:   0.8
+      citation: Suglia2010_Table2
+
+  # Cumulative stress prevalence by race — Suglia2010 Table 1
+  # Three-level stress classification: low / medium / high
+  cumulative_stress_prevalence:
+    Black_women:
+      pct_low_stress:    24.0
+      pct_medium_stress: 35.0
+      pct_high_stress:   41.0
+      citation: Suglia2010_Table1
+    Hispanic_women:
+      pct_low_stress:    57.0
+      pct_medium_stress: 30.0
+      pct_high_stress:   13.0
+      citation: Suglia2010_Table1
+
+  # Stress → cortisol regression coefficients — Suglia2010 Table 3
+  # Among Black women only; no significant association in Hispanic women
+  stress_cortisol_regression_Black_women:
+    time1_beta:          -0.1913   # high stress → lower morning cortisol
+    time1_p_value:        0.05
+    time2_beta:          -0.1999
+    time2_p_value:        0.05
+    diurnal_slope_beta:   0.2459   # high stress → flatter slope (less decline)
+    diurnal_slope_p:      0.05
+    note: >
+      Betas are standardized. Positive beta for diurnal slope indicates
+      flatter (blunted) diurnal cortisol rhythm under high cumulative stress.
+      Consistent with HPA axis dysregulation under chronic stress load.
+    citation: Suglia2010_Table3
+
+  stress_cortisol_regression_Hispanic_women:
+    association_significant: false
+    note: >
+      No significant association between cumulative stress and cortisol
+      in Hispanic women in Suglia2010. May reflect different stress typology,
+      coping resources, or measurement of stress across groups.
+    citation: Suglia2010
+
+# =============================================================================
+# SECTION 5: BMI DISTRIBUTIONS BY RACE/SEX
+# Based on Flegal2016 JAMA — NHANES 2013-2014
+# =============================================================================
+
+bmi:
+  source_study: "NHANES 2013-2014"
+  citation: Flegal2016
+  definition_obesity_bmi_ge: 30.0
+  definition_class3_obesity_bmi_ge: 40.0
+
+  # Age-adjusted obesity prevalence (%) by race/sex — Flegal2016 Table 2
+  obesity_prevalence_pct:
+    NHW_women:
+      obesity:       38.2
+      ci_lower:      34.5
+      ci_upper:      42.0
+      class3_obesity: 8.9
+      citation: Flegal2016_Table2
+    NHB_women:
+      obesity:       56.9
+      ci_lower:      51.1
+      ci_upper:      62.6
+      class3_obesity: 16.8
+      citation: Flegal2016_Table2
+    Hispanic_women:
+      obesity:       45.7
+      ci_lower:      41.0
+      ci_upper:      50.5
+      class3_obesity: 7.7
+      citation: Flegal2016_Table2
+    NHW_men:
+      obesity:       34.7
+      ci_lower:      31.2
+      ci_upper:      38.4
+      class3_obesity: 5.0
+      citation: Flegal2016_Table2
+    NHB_men:
+      obesity:       37.4
+      ci_lower:      31.2
+      ci_upper:      44.0
+      class3_obesity: 7.0
+      citation: Flegal2016_Table2
+    Hispanic_men:
+      obesity:       43.0
+      ci_lower:      36.6
+      ci_upper:      49.7
+      class3_obesity: 5.5
+      citation: Flegal2016_Table2
+
+  # Additional BMI mean for midlife Black women from Simons2021 (FACHS)
+  # Useful for Module 1 ALI BMI biomarker simulation in this demographic
+  midlife_NHB_women_fachs:
+    mean_bmi: 34.7
+    sd_bmi:   8.8
+    mean_age: 48.8
+    source: "FACHS cohort"
+    citation: Simons2021_Table1
+
+# =============================================================================
+# SECTION 6: RACIAL DISCRIMINATION & INFLAMMATION
+# Based on Simons2021 FACHS (n=391 Black women, mean age 48.8)
+# =============================================================================
+
+racial_discrimination:
+  source_study: "FACHS (Family and Community Health Study)"
+  source_n: 391
+  source_population: "African American women"
+  source_mean_age: 48.8
+  citation: Simons2021
+
+  # Persistent racial discrimination exposure = 8-year measure
+  # Inflammation = composite 7-cytokine index (IL-1β, IL-2, IL-5, IL-6,
+  # IL-17, TNFα, MIP-1b); single factor; loadings 0.84–0.97
+
+  # Path coefficient: racial discrimination → inflammation index
+  discrimination_to_inflammation:
+    beta:       0.114
+    p_value:    0.05
+    note: >
+      8-year persistent racial discrimination exposure → inflammatory composite.
+      Supports including discrimination as a direct upstream driver of
+      allostatic load in the WeatheringNet causal DAG.
+    citation: Simons2021
+
+  # Path coefficient: inflammation → chronic disease count (Poisson/IRR)
+  inflammation_to_chronic_disease:
+    irr:        1.251   # incidence rate ratio per SD increase in inflammation
+    p_value:    0.01
+    citation: Simons2021
+
+  # SES → chronic disease — from ZIP (zero-inflated Poisson) model in Simons2021
+  # See DECISION-017 for full interpretation.
+  #
+  # CRITICAL: Two-component result — SES affects susceptibility ONLY, not burden:
+  #   Binary component (susceptibility gate): OR = 21.073, p < 0.01  [USE THIS]
+  #   Count component (disease burden):       NOT SIGNIFICANT         [NO PATH]
+  #
+  # The count-component null is a confirmed reported finding from Simons (2021) Results,
+  # not a missing value. SES does not predict number of diseases once at-risk; that
+  # pathway runs through inflammation (IRR = 1.251). See DECISION-017.
+  ses_to_chronic_disease:
+    zip_binary_or: 21.073
+    zip_binary_p_value: 0.01
+    zip_binary_or_interpretation: >
+      Odds of being in the at-risk (non-structural-zero) class per 1 SD increase
+      in standardized SES composite (education + income). From binary (inflation)
+      component of ZIP model in MPlus 8.0. NOT a standard logistic OR. Use only
+      as susceptibility gate in two-part synthetic disease assignment.
+    zip_count_ses_irr: null          # explicitly null — non-significant in Simons2021
+    zip_count_ses_note: >
+      "The path from SES to the count variable (number of illnesses) is not
+      [significant]." — Simons et al. (2021) Results, p.11. Do not add a SES
+      path to the count model. Disease count accumulation runs through inflammation.
+    ses_variable_construction: >
+      2-item composite: education (0=less than HS to 5=postbaccalaureate) +
+      household income (continuous, all sources, all family members), both
+      z-scored then averaged. Unit = 1 SD of composite. Simons (2021) Methods.
+    citation: Simons2021
+
+  # Chronic disease count distribution — calibration target for synthetic generator
+  # Source: Simons2021 Results, n=391 FACHS Black women, Wave 5
+  chronic_disease_count_distribution:
+    n: 391
+    pct_0_diseases: 52.9   # 207/391 — structural + at-risk zeros combined
+    pct_1_disease:  30.7   # 120/391
+    pct_2_diseases:  8.4   # 33/391
+    pct_3plus:       8.4   # 33/391 — upper tail pooled; exact maximum unknown
+    note: >
+      Use these proportions as calibration targets for the ZIP synthetic outcome.
+      Simulated chronic disease counts should match these marginals within ±3 pp.
+    citation: Simons2021_Results
+
+  # Chronic disease prevalence in FACHS midlife Black women — Simons2021
+  chronic_disease_prevalence_fachs:
+    pct_arthritis:        33.0
+    pct_diabetes:         15.0
+    pct_heart_problems:   10.0
+    pct_any_chronic:      47.0
+    citation: Simons2021
+
+# =============================================================================
+# SECTION 7: AUTOIMMUNE DISEASE (AID) OUTCOMES
+# Based on Roberts2020 (nationwide rates) and Brew2022 (transgenerational)
+# =============================================================================
+
+autoimmune_disease:
+
+  # --- 7a. Population-level AID prevalence & race ratios ---
+  # Source: Roberts2020 — U.S. AID rates 2010-2016
+  prevalence:
+    source: "U.S. NCHS / insurance claims 2010-2016"
+    citation: Roberts2020
+
+    # Approximate prevalence rates per 100,000 population — Roberts2020
+    rates_per_100k:
+      SLE:
+        overall: 74.0
+        citation: Roberts2020
+      crohns_disease:
+        overall: 80.0
+        citation: Roberts2020
+      note: >
+        RA and MS rates in Roberts2020 are reported as comparison figures;
+        exact per-100k values for all conditions should be extracted from
+        Roberts2020 Figure 3 at time of NHANES validation phase.
+
+    # Race-specific rate ratios vs. Caucasian (reference = 1.0) — Roberts2020 Figure 4
+    race_rate_ratios:
+      African_American_vs_Caucasian:
+        SLE:        2.15   # midpoint of reported ~2.1–2.2x range
+        RA:         1.0    # approximately equivalent per Roberts2020
+        polymyositis_dermatomyositis: 2.0
+        citation: Roberts2020_Figure4
+      Native_American_vs_Caucasian:
+        RA:                    2.4
+        alopecia_areata:       5.5   # midpoint of 5–6x range
+        primary_biliary_cirrhosis: 3.0
+        citation: Roberts2020_Figure4
+
+  # --- 7b. Transgenerational autoimmune disease risk ---
+  # Source: Brew2022 Swedish cohort (n=453,516, 3 generations)
+  transgenerational:
+    source_study: "Swedish multi-generation cohort"
+    source_n: 453516
+    citation: Brew2022
+
+    # G2→G3 transgenerational effects via parental childhood bereavement (stress proxy)
+    # Outcome: G3 offspring autoimmune disease or early-onset asthma
+
+    paternal_childhood_bereavement_to_G3_autoimmune:
+      hr:        1.31
+      ci_lower:  1.06
+      ci_upper:  1.62
+      outcome:   "offspring autoimmune diseases (onset ≥ 3 years)"
+      note: >
+        Not mediated by SES or mood disorders in adjusted model.
+        This is the key parameter motivating WeatheringNet's G2→G3
+        transgenerational edge in the causal DAG.
+      citation: Brew2022
+
+    maternal_childhood_bereavement_to_G3_early_asthma:
+      hr:        1.15
+      ci_lower:  1.08
+      ci_upper:  1.23
+      outcome:   "offspring early-onset asthma (onset < 3 years)"
+      pct_mediated_by_ses:    0.305   # 28–33% range midpoint
+      pct_mediated_by_mood:   0.145   # 9–20% range midpoint
+      citation: Brew2022
+
+    # G3 autoimmune disease incidence rates — Brew2022
+    G3_AID_incidence:
+      rate_per_1000_person_years_overall:   1.4
+      rate_per_1000_person_years_onset_ge3: 1.5
+      citation: Brew2022
+
+# =============================================================================
+# SECTION 8: PRENATAL STRESS → OFFSPRING T1D
+# Based on Lundgren2018 DiPiS study (n=23,187, Sweden)
+# =============================================================================
+
+prenatal_stress_T1D:
+  source_study: "DiPiS (Diabetes Prediction in Skåne)"
+  source_n_2mo:  23187
+  source_n_2yr:  3784
+  citation: Lundgren2018
+
+  # Exposure: severe life events (SLEs) in first 2 years of child's life
+  # Outcome: T1D diagnosis
+  # Method: Cox proportional hazards, adjusted for FDRs, HLA-DQ risk,
+  #         paternal education, parents' country of birth
+
+  T1D_risk_any_SLE:
+    total_cohort:
+      hr:        1.67
+      ci_lower:  1.1
+      ci_upper:  2.7
+      p_value:   0.03
+      note: "SLEs during child's first 2 years → T1D in total DiPiS cohort"
+      citation: Lundgren2018
+    DQ28_high_risk_cohort:
+      hr:        2.2
+      ci_lower:  1.1
+      ci_upper:  4.2
+      p_value:   0.018
+      note: >
+        Stronger effect in HLA-DQ2/8 high-risk genetic subgroup.
+        Suggests stress-gene interaction on T1D risk.
+      citation: Lundgren2018
+
+  # Subgroup: socioeconomic SLEs (unemployment, divorce, family conflict)
+  # occurring during pregnancy — DQ2/8 cohort
+  T1D_risk_socioeconomic_SLE_during_pregnancy:
+    DQ28_cohort:
+      hr:        2.17
+      ci_lower:  1.1
+      ci_upper:  4.3
+      p_value:   0.03
+      note: >
+        This is the parameter closest to the HR=2.16 cited in Foster (2023).
+        Socioeconomic severe life events (unemployment, divorce, family
+        conflict) during pregnancy → T1D in HLA high-risk offspring.
+        Directly relevant to WeatheringNet's maternal stress → offspring
+        autoimmune disease causal pathway.
+      citation: Lundgren2018
+
+  # After-pregnancy SLEs in total cohort
+  T1D_risk_socioeconomic_SLE_after_pregnancy:
+    total_cohort:
+      hr:        2.07
+      ci_lower:  1.01
+      ci_upper:  4.2
+      p_value:   0.047
+      citation: Lundgren2018
+    DQ28_cohort:
+      hr:        4.98
+      ci_lower:  2.3
+      ci_upper:  11.0
+      p_value:   0.001
+      note: >
+        Very large HR for post-pregnancy SLEs in genetic high-risk group.
+        Treat as upper-bound sensitivity scenario in simulation.
+      citation: Lundgren2018
+
+# =============================================================================
+# SECTION 9: SIMULATION CONTROL PARAMETERS
+# Technical parameters for synthetic data generation
+# (These are design choices, not literature-derived; document in DECISIONS.md)
+# =============================================================================
+
+simulation:
+  random_seed: 42
+  n_bootstrap_samples: 1000   # for confidence interval estimation on synthetic data
+  train_test_split: 0.8
+
+  # Biomarker generation approach
+  # Each biomarker is drawn from a race/sex/age-stratified distribution
+  # parameterized from Section 2 (ALI thresholds) and Sections 3–5.
+  biomarker_distribution: "log_normal"   # log-normal approximates right-skewed
+                                         # biomarker distributions (Geronimus2006)
+  enforce_threshold_prevalence: true     # scale biomarker draws so that pct_high_score
+                                         # matches Table 1 values from Geronimus2006
+
+  # Causal path coefficients to apply in structural equation model
+  # for outcome generation. These are calibrated to match reported ORs/HRs.
+  # Final calibration documented in docs/DECISIONS.md
+  dag_path_weights:
+    racial_discrimination_to_inflammation: 0.114     # Simons2021
+    inflammation_to_chronic_disease_irr:   1.251     # Simons2021
+    prenatal_stress_to_offspring_T1D_hr:   2.17      # Lundgren2018 (DQ2/8 subgroup)
+    bereavement_to_offspring_AID_hr:       1.31      # Brew2022
+    allostatic_load_age_race_or:
+      NHB_women_25_34: 2.3   # Geronimus2006 Table 2
+      NHB_women_35_44: 2.2
+      NHB_women_45_54: 2.0
+      NHB_women_55_64: 1.9
+      NHB_men_25_34:   1.5
+      NHB_men_35_44:   1.5
+      NHB_men_45_54:   1.4
+      NHB_men_55_64:   1.4
+
+# =============================================================================
+# SECTION 10: PARAMETER PROVENANCE SUMMARY
+# Quick-reference table for DECISIONS.md entries
+# =============================================================================
+
+provenance_summary:
+  # Format: parameter_name: {value, source_paper, table_figure, notes}
+  ALI_high_risk_threshold:
+    value: "≥4 of 10 biomarkers"
+    source: Geronimus2006
+    location: "Methods section"
+
+  ALI_biomarker_thresholds:
+    value: "10 cut-points (SBP, DBP, BMI, HbA1c, albumin, creatinine clearance,
+            triglycerides, CRP, homocysteine, total cholesterol)"
+    source: Geronimus2006
+    location: "Table 1 footnote"
+
+  CRP_median_NHB_women:
+    value: "3.5 mg/L"
+    source: Khera2005
+    location: "Figure 2"
+
+  CRP_pct_high_NHB_women:
+    value: "57.5%"
+    source: Khera2005
+    location: "Table 4"
+
+  cortisol_morning_Black_pregnant:
+    value: "14.9 nmol/L (SD 9.1)"
+    source: Suglia2010
+    location: "Table 2"
+
+  stress_high_pct_Black_pregnant:
+    value: "41%"
+    source: Suglia2010
+    location: "Table 1"
+
+  stress_cortisol_beta_Black:
+    value: "-0.19 (T1), -0.20 (T2)"
+    source: Suglia2010
+    location: "Table 3"
+
+  SLE_AID_rate_ratio:
+    value: "~2.15x Caucasian"
+    source: Roberts2020
+    location: "Figure 4"
+
+  transgenerational_AID_HR:
+    value: "1.31 (95% CI 1.06–1.62)"
+    source: Brew2022
+    location: "Table 3"
+
+  discrimination_inflammation_beta:
+    value: "0.114 (p<0.05)"
+    source: Simons2021
+    location: "Table 3"
+
+  prenatal_stress_T1D_HR:
+    value: "2.17 (95% CI 1.1–4.3)"
+    source: Lundgren2018
+    location: "Results, subgroup analysis"
+
+  obesity_pct_NHB_women:
+    value: "56.9% (95% CI 51.1–62.6)"
+    source: Flegal2016
+    location: "Table 2"
