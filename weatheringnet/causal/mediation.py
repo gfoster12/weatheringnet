@@ -172,7 +172,9 @@ class MediationAnalyzer:
         boot_ndes = []
 
         for _ in range(n_bootstrap):
-            boot_df = df.sample(n=len(df), replace=True, random_state=rng.integers(1e9))
+            boot_df = df.sample(
+                n=len(df), replace=True, random_state=int(rng.integers(1e9))
+            )
             result = self.fit(boot_df)
             if result:
                 boot_nies.append(result["nie"])
