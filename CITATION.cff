@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: WeatheringNet
+message: "If you use this software, please cite it using these metadata."
+type: software
+authors:
+  - family-names: Foster
+    given-names: Gabrielle
+    orcid: https://orcid.org/0000-0003-2620-1065
+    affiliation: Johns Hopkins Bloomberg School of Public Health
+repository-code: https://github.com/gfoster12/weatheringnet
+license: MIT
+version: 0.1.0
+abstract: >
+  Computational framework for quantifying transgenerational autoimmune
+  disease risk from maternal stress accumulation, operationalizing the
+  weathering hypothesis with a focus on racial health equity.
+keywords:
+  - health equity
+  - autoimmune disease
+  - allostatic load
+  - weathering hypothesis
+  - causal inference
+  - maternal stress
