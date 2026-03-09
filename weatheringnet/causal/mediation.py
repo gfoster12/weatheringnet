@@ -173,7 +173,7 @@ class MediationAnalyzer:
 
         for _ in range(n_bootstrap):
             boot_df = df.sample(
-                n=len(df), replace=True, random_state=int(rng.integers(1e9))
+                n=len(df), replace=True, random_state=int(rng.integers(10**9))
             )
             result = self.fit(boot_df)
             if result:
