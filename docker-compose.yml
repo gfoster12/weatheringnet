@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://weathering:weathering@db:5432/weatheringnet
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    command: uvicorn weatheringnet.dashboard.backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: weatheringnet/dashboard/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - api
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: weathering
+      POSTGRES_PASSWORD: weathering
+      POSTGRES_DB: weatheringnet
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:

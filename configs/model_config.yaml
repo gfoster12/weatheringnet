@@ -1,0 +1,77 @@
+model:
+  type: xgboost
+  calibrate: true
+  random_state: 42
+
+  xgboost_params:
+    n_estimators: 500
+    learning_rate: 0.05
+    max_depth: 6
+    subsample: 0.8
+    colsample_bytree: 0.8
+    scale_pos_weight: 5     # ~5:1 control:case ratio expected
+    eval_metric: aucpr
+
+features:
+  # Primary features — from paper mechanisms
+  stress_pathway:
+    - ali_score
+    - cortisol
+    - dheas
+    - crp
+    - wbc
+    - nlr
+
+  hpa_axis:
+    - systolic_bp
+    - diastolic_bp
+    - hba1c
+    - glucose
+
+  clinical_flags:
+    - ptsd_depression_flag
+    - infection_pregnancy_icd
+    - severe_life_events_flag
+    - hla_dq2_8_flag
+    - csection_flag
+    - hydralazine_flag
+    - preterm_flag
+
+  structural:
+    - sdrs_score
+    - food_desert_flag
+    - pcb_percentile
+
+  demographic:
+    - maternal_age
+    - race_ethnicity
+    - sex_offspring
+    - nhanes_cycle
+
+outcome:
+  column: aid_diagnosis_offspring
+  positive_class: 1
+
+evaluation:
+  cv_folds: 5
+  metrics:
+    - auroc
+    - auprc
+    - sensitivity
+    - specificity
+    - ppv
+    - npv
+  fairness_groups:
+    - race_ethnicity
+    - sex_offspring
+
+explainability:
+  shap: true
+  background_sample_n: 500
+  plot_top_n: 20
+  pathway_aggregation: true
+
+output:
+  model_dir: models/
+  results_dir: data/processed/model_results/
+  plots_dir: data/processed/model_results/plots/

@@ -1,0 +1,37 @@
+data:
+  raw_dir: data/raw
+  output_dir: data/processed/ali
+
+cycles:
+  - "2009-2010"
+  - "2011-2012"
+  - "2013-2014"
+  - "2015-2016"
+  - "2017-2018"
+  - "2019-2020"
+
+scoring_method: count        # count | z_score | pca
+biomarker_set: primary       # primary | extended
+
+stratify_by:
+  - race_ethnicity
+  - sex
+  - age_group                # 18-34, 35-44, 45-54, 55+
+
+# Include pregnant participants as separate stratum
+# (critical for the maternal stress analysis)
+include_pregnant: true
+pregnant_stratum: true
+
+# Sensitivity analysis: run all three scoring methods
+sensitivity_analysis: true
+
+# Survey weights: apply NHANES complex survey design weights
+apply_survey_weights: true
+
+output:
+  formats:
+    - parquet
+    - csv
+  plots: true
+  plot_dir: data/processed/ali/plots

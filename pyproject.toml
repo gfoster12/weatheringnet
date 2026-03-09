@@ -1,0 +1,115 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "weatheringnet"
+version = "0.1.0"
+description = "Computational framework for quantifying transgenerational autoimmune disease risk from maternal stress accumulation"
+authors = [{ name = "Gabrielle Foster", email = "you@email.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["health equity", "autoimmune disease", "allostatic load", "causal inference", "bioinformatics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+]
+
+dependencies = [
+    # Data
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "pyarrow>=12.0",
+
+    # NHANES / geospatial
+    "nhanes>=0.1.0",
+    "geopandas>=0.14",
+    "requests>=2.31",
+
+    # Causal inference
+    "dowhy>=0.11",
+    "econml>=0.14",
+    "networkx>=3.1",
+
+    # ML
+    "scikit-learn>=1.3",
+    "xgboost>=2.0",
+    "shap>=0.43",
+    "imbalanced-learn>=0.11",
+
+    # Stats
+    "statsmodels>=0.14",
+    "lifelines>=0.27",         # survival analysis
+    "pingouin>=0.5",
+
+    # Viz
+    "matplotlib>=3.7",
+    "seaborn>=0.13",
+    "plotly>=5.17",
+
+    # Config + utilities
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "loguru>=0.7",
+    "typer>=0.9",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.11",
+    "black>=23.0",
+    "ruff>=0.1",
+    "mypy>=1.5",
+    "pre-commit>=3.4",
+    "jupyter>=1.0",
+    "ipykernel>=6.25",
+]
+dashboard = [
+    "fastapi>=0.104",
+    "uvicorn[standard]>=0.24",
+    "sqlalchemy>=2.0",
+    "psycopg2-binary>=2.9",
+    "alembic>=1.12",
+    "python-jose[cryptography]>=3.3",
+    "passlib[bcrypt]>=1.7",
+    "python-multipart>=0.0.6",
+    "redis>=5.0",
+]
+omop = [
+    "ohdsi-pyohdsi>=1.0",
+    "sqlalchemy>=2.0",
+]
+
+[project.scripts]
+weatheringnet = "weatheringnet.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["weatheringnet*"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+strict = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=weatheringnet --cov-report=term-missing"
